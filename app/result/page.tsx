@@ -5,10 +5,17 @@ import { useRouter } from 'next/navigation';
 import { useTestStore, TestResult } from '@/store/useTestStore';
 import { questions } from '@/data/questions';
 import { motion } from 'framer-motion';
-import { Share2, Download, Home, Brain, Check, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Share2, Download, Home, Brain, Loader2 } from 'lucide-react';
 import html2canvas from 'html2canvas';
-import { RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, Radar, ResponsiveContainer } from 'recharts';
+import dynamic from 'next/dynamic';
+
+// Dynamically import Recharts components to avoid SSR issues
+const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.ResponsiveContainer), { ssr: false });
+const RadarChart = dynamic(() => import('recharts').then(mod => mod.RadarChart), { ssr: false });
+const PolarGrid = dynamic(() => import('recharts').then(mod => mod.PolarGrid), { ssr: false });
+const PolarAngleAxis = dynamic(() => import('recharts').then(mod => mod.PolarAngleAxis), { ssr: false });
+const PolarRadiusAxis = dynamic(() => import('recharts').then(mod => mod.PolarRadiusAxis), { ssr: false });
+const Radar = dynamic(() => import('recharts').then(mod => mod.Radar), { ssr: false });
 
 export default function ResultPage() {
   const router = useRouter();
@@ -17,20 +24,24 @@ export default function ResultPage() {
   } = useTestStore();
   const [scoreData, setScoreData] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   useEffect(() => {
-    if (status !== 'completed' && status !== 'idle') { 
-        // If reloading on result page without completing, redirect. 
-        // But usually status is completed after finishTest.
-        // If coming from history, we might want to support that later.
-        // For now, assume flow is correct.
-        if (Object.keys(answers).length === 0) router.replace('/');
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
+    // Check if we have answers. If not, redirect to home.
+    // We use a timeout to allow store hydration if needed, but usually persist works fast.
+    // If status is idle and no answers, it's an invalid access.
+    if (status === 'idle' && Object.keys(answers).length === 0) {
+       router.replace('/');
+       return;
     }
 
     if (Object.keys(answers).length > 0 && !scoreData) {
       calculateScore();
     }
-  }, [status, answers]);
+  }, [status, answers, router, scoreData]);
 
   const calculateScore = () => {
     let correct = 0;
@@ -48,8 +59,17 @@ export default function ResultPage() {
 
     const rawScore = correct;
     const total = questions.length;
-    // Fake IQ calculation: Base 85 + (raw/total * 60) -> range 85-145 roughly
-    const iq = Math.round(85 + (rawScore / total) * 60);
+    
+    // Scientific Scoring Logic (Simulated)
+    // Mean 100, SD 15. 
+    // Assume our hard test has a mean raw score of 40% for average population (IQ 100).
+    // This is just a simulation.
+    const percentage = rawScore / total;
+    // If percentage is 0.4 -> IQ 100. 
+    // If percentage is 1.0 -> IQ 145 (3 SD).
+    // If percentage is 0 -> IQ 70 (-2 SD).
+    // Linear mapping for simplicity: IQ = 70 + (percentage * 75)
+    const iq = Math.round(70 + (percentage * 75));
 
     const result: TestResult = {
       date: new Date().toISOString(),
@@ -60,25 +80,63 @@ export default function ResultPage() {
       answers
     };
 
+    // Save only if not already saved? useTestStore handles logic but better be safe
     saveResult(result);
     setScoreData({ iq, rawScore, total, typeScores });
   };
 
   const handleShare = async () => {
     if (!cardRef.current) return;
+    setIsGenerating(true);
     try {
+      // Wait a bit for fonts/charts to be fully ready
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
       const canvas = await html2canvas(cardRef.current, {
         backgroundColor: '#ffffff',
-        scale: 2,
+        scale: 2, // High res
+        useCORS: true,
+        logging: false
       });
       const image = canvas.toDataURL('image/png');
+      
       const link = document.createElement('a');
       link.href = image;
       link.download = `IQ-Test-Result-${new Date().getTime()}.png`;
       link.click();
     } catch (err) {
       console.error('Failed to generate image', err);
+    } finally {
+      setIsGenerating(false);
     }
+  };
+
+  if (!scoreData) return (
+    <div className="min-h-screen flex items-center justify-center bg-background">
+      <Loader2 className="animate-spin text-primary" size={32} />
+    </div>
+  );
+
+  const chartData = Object.entries(scoreData.typeScores).map(([type, data]: [string, any]) => ({
+    subject: type.charAt(0).toUpperCase() + type.slice(1), // Capitalize
+    A: (data.correct / data.total) * 100,
+    fullMark: 100,
+  }));
+
+  const texts = {
+    title: { en: 'Test Results', zh: '测试结果' },
+    iqLabel: { en: 'Estimated IQ Score', zh: '预估智商 (IQ)' },
+    correct: { en: 'Correct Answers', zh: '答对题目' },
+    time: { en: 'Time Used', zh: '用时' },
+    share: { en: 'Download Card', zh: '下载卡片' },
+    home: { en: 'Back to Home', zh: '返回首页' },
+    analysis: { en: 'Performance Analysis', zh: '能力分析' }
+  };
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}m ${s}s`;
   };
 
   const shareText = `I just scored ${scoreData.iq} (Top ${(100 - ((scoreData.iq - 85) / 60 * 100)).toFixed(1)}%) on this Scientific IQ Test! Can you beat me? #IQTest #BrainTraining`;
@@ -92,176 +150,162 @@ export default function ResultPage() {
     window.open(`http://service.weibo.com/share/share.php?title=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`, '_blank');
   };
 
-  if (!scoreData) return null;
-
-  const chartData = Object.entries(scoreData.typeScores).map(([type, data]: [string, any]) => ({
-    subject: type.toUpperCase(),
-    A: (data.correct / data.total) * 100,
-    fullMark: 100,
-  }));
-
-  const texts = {
-    title: { en: 'Test Results', zh: '测试结果' },
-    iqLabel: { en: 'Estimated IQ Score', zh: '预估智商 (IQ)' },
-    correct: { en: 'Correct Answers', zh: '答对题目' },
-    time: { en: 'Time Used', zh: '用时' },
-    share: { en: 'Download Result Card', zh: '下载结果卡片' },
-    home: { en: 'Back to Home', zh: '返回首页' },
-    analysis: { en: 'Performance Analysis', zh: '能力分析' }
-  };
-
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}m ${s}s`;
-  };
-
   return (
-    <div className="min-h-screen bg-muted/30 py-8 px-4 flex flex-col items-center">
-      <div className="max-w-4xl w-full flex justify-between items-center mb-8">
+    <div className="min-h-screen bg-secondary/30 py-12 px-4 flex flex-col items-center font-sans text-foreground">
+      <div className="max-w-5xl w-full flex justify-between items-center mb-12">
         <button 
           onClick={() => router.push('/')}
-          className="flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-white hover:shadow-sm transition-all text-muted-foreground hover:text-foreground"
         >
           <Home size={20} />
           {texts.home[language]}
         </button>
-        <div className="flex gap-2">
+        <div className="flex gap-3">
           <button
             onClick={shareToTwitter}
-            className="p-2 rounded-full bg-black text-white hover:opacity-80 transition-opacity"
+            className="p-3 rounded-full bg-black text-white hover:scale-110 transition-transform shadow-sm"
             title="Share to X (Twitter)"
           >
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
           </button>
           <button
             onClick={shareToWeibo}
-            className="p-2 rounded-full bg-[#df2029] text-white hover:opacity-80 transition-opacity"
+            className="p-3 rounded-full bg-[#df2029] text-white hover:scale-110 transition-transform shadow-sm"
             title="Share to Weibo"
           >
             <Share2 size={18} />
           </button>
           <button
             onClick={handleShare}
-            className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-full font-medium shadow-md hover:shadow-lg transition-all"
+            disabled={isGenerating}
+            className="flex items-center gap-2 bg-primary text-primary-foreground px-6 py-2 rounded-full font-bold shadow-lg shadow-primary/25 hover:shadow-xl hover:scale-105 transition-all disabled:opacity-50"
           >
-            <Download size={18} />
+            {isGenerating ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
             {texts.share[language]}
           </button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 w-full max-w-5xl">
-        {/* Shareable Card Area */}
-        <div className="flex justify-center">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 w-full max-w-5xl items-start">
+        {/* Shareable Card Area - Centered on mobile, left on desktop */}
+        <div className="flex justify-center lg:justify-end">
           <div 
             ref={cardRef} 
-            className="w-full max-w-md bg-white text-black p-8 rounded-3xl shadow-xl border relative overflow-hidden"
+            className="w-full max-w-[400px] bg-white text-slate-900 p-8 rounded-[2rem] shadow-2xl border border-slate-100 relative overflow-hidden"
             style={{ aspectRatio: '3/4' }}
           >
-            {/* Decorators */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-2xl" />
-            <div className="absolute bottom-0 left-0 w-40 h-40 bg-purple-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-2xl" />
+            {/* Modern Scientific Background */}
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-cyan-400" />
+            <div className="absolute -top-20 -right-20 w-64 h-64 bg-blue-50 rounded-full blur-3xl opacity-60" />
+            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-cyan-50 rounded-full blur-3xl opacity-60" />
 
             <div className="relative z-10 h-full flex flex-col items-center justify-between">
-              <div className="text-center">
-                <div className="flex items-center justify-center gap-2 mb-2 text-blue-600">
-                  <Brain size={32} />
-                  <span className="font-bold text-xl tracking-wider">NEURO/METRICS</span>
+              <div className="text-center w-full">
+                <div className="flex items-center justify-center gap-2 mb-4 text-blue-600">
+                  <Brain size={28} strokeWidth={2.5} />
+                  <span className="font-extrabold text-lg tracking-widest">NEURO/METRICS</span>
                 </div>
-                <div className="h-px w-12 bg-gray-200 mx-auto" />
+                <div className="h-px w-full bg-slate-100" />
               </div>
 
-              <div className="text-center">
-                <div className="text-sm font-medium text-gray-500 uppercase tracking-widest mb-2">
+              <div className="text-center flex-1 flex flex-col justify-center">
+                <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em] mb-4">
                   {texts.iqLabel[language]}
                 </div>
-                <div className="text-8xl font-black text-gray-900 tracking-tighter leading-none">
+                <div className="text-8xl font-black text-slate-900 tracking-tighter leading-none mb-2" style={{ textShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
                   {scoreData.iq}
                 </div>
-                <div className="inline-block mt-4 px-4 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
-                  Top {(100 - ((scoreData.iq - 85) / 60 * 100)).toFixed(1)}% Percentile
+                <div className="inline-flex items-center px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-sm font-bold">
+                   Top {(100 - ((scoreData.iq - 85) / 60 * 100)).toFixed(1)}%
                 </div>
               </div>
 
-              <div className="w-full h-48">
-                 {/* Radar Chart for Card */}
+              <div className="w-full h-48 mb-4">
                 <ResponsiveContainer width="100%" height="100%">
                   <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
-                    <PolarGrid stroke="#e5e7eb" />
-                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#6b7280', fontSize: 10 }} />
+                    <PolarGrid stroke="#e2e8f0" />
+                    <PolarAngleAxis dataKey="subject" tick={{ fill: '#64748b', fontSize: 10, fontWeight: 600 }} />
                     <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                     <Radar
                       name="Score"
                       dataKey="A"
                       stroke="#2563eb"
+                      strokeWidth={2}
                       fill="#3b82f6"
-                      fillOpacity={0.3}
+                      fillOpacity={0.2}
                     />
                   </RadarChart>
                 </ResponsiveContainer>
               </div>
 
-              <div className="w-full grid grid-cols-2 gap-4 text-center border-t border-gray-100 pt-6">
+              <div className="w-full grid grid-cols-2 gap-4 text-center border-t border-slate-100 pt-6">
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">
-                    {scoreData.rawScore}/{scoreData.total}
+                  <div className="text-2xl font-black text-slate-900">
+                    {scoreData.rawScore}<span className="text-base text-slate-400 font-medium">/{scoreData.total}</span>
                   </div>
-                  <div className="text-xs text-gray-500 uppercase">{texts.correct[language]}</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{texts.correct[language]}</div>
                 </div>
                 <div>
-                  <div className="text-2xl font-bold text-gray-900">
+                  <div className="text-2xl font-black text-slate-900">
                     {formatTime(scoreData.timeElapsed)}
                   </div>
-                  <div className="text-xs text-gray-500 uppercase">{texts.time[language]}</div>
+                  <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{texts.time[language]}</div>
                 </div>
               </div>
               
-              <div className="text-[10px] text-gray-400 mt-4 text-center">
-                Certified by NeuroMetrics AI Platform • {new Date().toLocaleDateString()}
+              <div className="text-[10px] text-slate-300 mt-6 text-center font-medium">
+                Certified by NeuroMetrics • {new Date().toLocaleDateString()}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Detailed Analysis for User (Not on card) */}
-        <div className="space-y-6">
+        {/* Detailed Analysis */}
+        <div className="space-y-6 pt-4">
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-card border rounded-3xl p-8 shadow-sm"
+            className="bg-white border border-slate-100 rounded-3xl p-8 shadow-xl shadow-slate-200/50"
           >
-            <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+            <h3 className="text-2xl font-bold mb-8 flex items-center gap-3 text-slate-900">
+              <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center text-blue-600">
+                 <Brain size={20} />
+              </div>
               {texts.analysis[language]}
             </h3>
             
-            <div className="space-y-6">
+            <div className="space-y-8">
               {Object.entries(scoreData.typeScores).map(([type, data]: [string, any]) => (
-                <div key={type} className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-medium capitalize">{type} Reasoning</span>
-                    <span className="text-sm text-muted-foreground">
+                <div key={type} className="space-y-3">
+                  <div className="flex justify-between items-end">
+                    <span className="font-bold text-slate-700 capitalize text-lg">{type}</span>
+                    <span className="text-sm font-medium text-slate-500">
                       {data.correct} / {data.total}
                     </span>
                   </div>
-                  <div className="h-2 bg-secondary rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-primary rounded-full transition-all duration-1000 ease-out"
-                      style={{ width: `${(data.correct / data.total) * 100}%` }}
+                  <div className="h-3 bg-slate-100 rounded-full overflow-hidden">
+                    <motion.div 
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(data.correct / data.total) * 100}%` }}
+                      transition={{ duration: 1, ease: "easeOut" }}
+                      className="h-full bg-blue-600 rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]"
                     />
                   </div>
                 </div>
               ))}
             </div>
 
-            <div className="mt-8 p-4 bg-muted/50 rounded-xl text-sm leading-relaxed text-muted-foreground">
-              <p className="mb-2 font-semibold text-foreground">Performance Insight:</p>
-              <p>
+            <div className="mt-10 p-6 bg-slate-50 rounded-2xl text-slate-600 leading-relaxed border border-slate-100">
+              <p className="mb-3 font-bold text-slate-900 flex items-center gap-2">
+                <Loader2 className="animate-pulse text-blue-500" size={16} />
+                AI Analysis
+              </p>
+              <p className="text-sm">
                 Your abstract reasoning scores indicate a strong ability to identify patterns in complex data. 
                 {scoreData.iq > 115 
-                  ? " You demonstrate exceptional cognitive processing speed and analytical capabilities." 
-                  : " Consistent practice with spatial puzzles can further enhance your cognitive flexibility."}
+                  ? " You demonstrate exceptional cognitive processing speed and analytical capabilities, placing you in the upper echelons of logical reasoning." 
+                  : " Consistent practice with spatial puzzles can further enhance your cognitive flexibility and pattern recognition speed."}
               </p>
             </div>
           </motion.div>

@@ -5,19 +5,18 @@ import { useRouter } from 'next/navigation';
 import { useTestStore } from '@/store/useTestStore';
 import { questions } from '@/data/questions';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Save, Clock, CheckCircle } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Save, Clock, CheckCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 export default function TestPage() {
   const router = useRouter();
   const { 
     status, currentQuestionIndex, answers, timeElapsed, language,
-    answerQuestion, nextQuestion, prevQuestion, finishTest, tickTimer,
-    saveResult // Oops, actually we just finishTest here, calculation is in result usually or here.
+    answerQuestion, nextQuestion, prevQuestion, finishTest, tickTimer
   } = useTestStore();
   
-  // Hydration check
   const [mounted, setMounted] = useState(false);
+  
   useEffect(() => {
     setMounted(true);
     if (status === 'idle') {
@@ -25,7 +24,6 @@ export default function TestPage() {
     }
   }, [status, router]);
 
-  // Timer
   useEffect(() => {
     if (status !== 'in_progress') return;
     const timer = setInterval(tickTimer, 1000);
@@ -70,78 +68,85 @@ export default function TestPage() {
     prev: { en: 'Previous', zh: '上一题' },
     next: { en: 'Next', zh: '下一题' },
     finish: { en: 'Finish', zh: '提交试卷' },
-    question: { en: 'Question', zh: '问题' },
+    hint: { en: 'Select the best answer.', zh: '请选择最恰当的答案。' }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900">
       {/* Top Bar */}
-      <header className="h-16 border-b bg-card/50 backdrop-blur sticky top-0 z-10 px-4 flex items-center justify-between">
+      <header className="h-16 bg-white border-b border-slate-200 sticky top-0 z-10 px-4 md:px-8 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-4 flex-1">
           <button 
             onClick={handleSaveAndQuit}
-            className="text-muted-foreground hover:text-foreground flex items-center gap-2 text-sm font-medium transition-colors"
+            className="text-slate-500 hover:text-blue-600 flex items-center gap-2 text-sm font-medium transition-colors"
           >
             <Save size={18} />
             <span className="hidden sm:inline">{texts.save[language]}</span>
           </button>
         </div>
         
-        <div className="flex items-center gap-2 font-mono font-medium text-lg tabular-nums">
-          <Clock size={20} className="text-primary" />
+        <div className="flex items-center gap-2 font-mono font-medium text-lg text-slate-700 bg-slate-100 px-3 py-1 rounded-md">
+          <Clock size={18} className="text-blue-600" />
           {formatTime(timeElapsed)}
         </div>
         
-        <div className="flex-1 flex justify-end">
-          <div className="text-sm font-medium text-muted-foreground">
-            {currentQuestionIndex + 1} / {totalQuestions}
+        <div className="flex-1 flex justify-end items-center gap-2">
+          <span className="text-sm font-bold text-slate-400 uppercase tracking-wider hidden sm:inline">Question</span>
+          <div className="text-lg font-bold text-blue-600">
+            {currentQuestionIndex + 1} <span className="text-slate-300 text-base font-normal">/ {totalQuestions}</span>
           </div>
         </div>
       </header>
 
       {/* Progress Bar */}
-      <div className="h-1 bg-secondary w-full">
+      <div className="h-1.5 bg-slate-200 w-full">
         <motion.div 
-          className="h-full bg-primary"
+          className="h-full bg-blue-600"
           initial={{ width: 0 }}
           animate={{ width: `${progress}%` }}
-          transition={{ duration: 0.5 }}
+          transition={{ duration: 0.5, ease: "circOut" }}
         />
       </div>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col items-center justify-center p-4 md:p-8 max-w-4xl mx-auto w-full">
+      <main className="flex-1 flex flex-col items-center justify-start p-4 md:p-8 max-w-5xl mx-auto w-full gap-8">
         <AnimatePresence mode="wait">
           <motion.div
             key={currentQuestion.id}
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.3 }}
             className="w-full"
           >
-            {/* Question Card */}
-            <div className="bg-card border rounded-3xl shadow-sm p-6 md:p-10">
-              <div className="mb-6">
-                <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider">
-                  {currentQuestion.type}
+            {/* Question Area */}
+            <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 md:p-10 mb-6">
+              <div className="flex items-center justify-between mb-6">
+                <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-700 text-xs font-bold uppercase tracking-wider border border-blue-100">
+                  {currentQuestion.type} reasoning
                 </span>
+                <HelpCircle size={20} className="text-slate-300" />
               </div>
               
-              <h2 className="text-2xl md:text-3xl font-bold mb-8 leading-snug">
+              <h2 className="text-xl md:text-2xl font-medium mb-8 leading-snug text-slate-800">
                 {currentQuestion.text[language]}
               </h2>
 
-              {currentQuestion.imageUrl && (
-                <div className="mb-8 bg-muted/50 rounded-xl p-4 flex justify-center">
-                  {/* In a real app, use next/image. Here using a placeholder div or simple text */}
-                  <div className="h-48 w-full md:w-2/3 bg-accent rounded-lg flex items-center justify-center border-2 border-dashed border-muted-foreground/25">
-                    <span className="text-muted-foreground">Visual Pattern Placeholder</span>
-                  </div>
+              {/* SVG Content Render */}
+              {currentQuestion.svgContent && (
+                <div className="mb-10 bg-slate-50 rounded-xl border border-slate-100 p-6 flex justify-center overflow-hidden">
+                  <div 
+                    className="w-full max-w-2xl text-slate-800"
+                    dangerouslySetInnerHTML={{ __html: currentQuestion.svgContent }}
+                  />
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Options Grid */}
+              <div className={cn(
+                "grid gap-4",
+                currentQuestion.options.some(o => o.svgContent) ? "grid-cols-2 md:grid-cols-4" : "grid-cols-1 md:grid-cols-2"
+              )}>
                 {currentQuestion.options.map((option) => {
                   const isSelected = answers[currentQuestion.id] === option.id;
                   return (
@@ -149,32 +154,43 @@ export default function TestPage() {
                       key={option.id}
                       onClick={() => handleOptionSelect(option.id)}
                       className={cn(
-                        "relative p-4 md:p-6 rounded-xl border-2 text-left transition-all hover:border-primary/50 active:scale-[0.99]",
+                        "relative p-4 rounded-xl border-2 text-left transition-all group",
                         isSelected 
-                          ? "border-primary bg-primary/5 ring-2 ring-primary/20" 
-                          : "border-muted bg-background hover:bg-accent/50"
+                          ? "border-blue-600 bg-blue-50/50 ring-4 ring-blue-100 z-10" 
+                          : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-md"
                       )}
                     >
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-col md:flex-row items-center gap-3 md:gap-4 justify-center h-full">
+                         {/* Option Label (A, B, C, D) */}
                         <div className={cn(
-                          "w-8 h-8 rounded-full flex items-center justify-center border-2 text-sm font-bold transition-colors",
+                          "w-8 h-8 rounded-full flex items-center justify-center border-2 text-sm font-bold transition-colors shrink-0",
                           isSelected 
-                            ? "border-primary bg-primary text-primary-foreground" 
-                            : "border-muted-foreground text-muted-foreground"
+                            ? "border-blue-600 bg-blue-600 text-white" 
+                            : "border-slate-200 text-slate-400 group-hover:border-blue-300 group-hover:text-blue-500"
                         )}>
                           {option.id}
                         </div>
-                        <span className="text-lg font-medium">
-                          {option.text?.[language] || `Option ${option.id}`}
-                        </span>
+
+                        {/* Option Content */}
+                        {option.svgContent ? (
+                           <div 
+                             className="w-16 h-16 md:w-24 md:h-24 text-slate-700"
+                             dangerouslySetInnerHTML={{ __html: option.svgContent }}
+                           />
+                        ) : (
+                          <span className="text-lg font-medium text-slate-700">
+                            {option.text?.[language]}
+                          </span>
+                        )}
                       </div>
+                      
                       {isSelected && (
                         <motion.div 
                           initial={{ scale: 0 }} 
                           animate={{ scale: 1 }}
-                          className="absolute top-4 right-4 text-primary"
+                          className="absolute -top-2 -right-2 bg-white rounded-full text-blue-600 shadow-sm"
                         >
-                          <CheckCircle size={20} />
+                          <CheckCircle size={24} fill="currentColor" className="text-blue-600" />
                         </motion.div>
                       )}
                     </button>
@@ -187,29 +203,31 @@ export default function TestPage() {
       </main>
 
       {/* Footer Navigation */}
-      <footer className="p-4 md:p-8 flex justify-center gap-4 max-w-4xl mx-auto w-full">
-        <button
-          onClick={handlePrev}
-          disabled={currentQuestionIndex === 0}
-          className="px-6 py-3 rounded-xl font-medium text-muted-foreground hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
-        >
-          <ChevronLeft size={20} />
-          {texts.prev[language]}
-        </button>
-        
-        <button
-          onClick={handleNext}
-          disabled={!answers[currentQuestion.id]}
-          className={cn(
-            "px-8 py-3 rounded-xl font-bold text-lg transition-all shadow-sm flex items-center gap-2",
-            answers[currentQuestion.id] 
-              ? "bg-primary text-primary-foreground hover:opacity-90 hover:shadow-md" 
-              : "bg-muted text-muted-foreground cursor-not-allowed"
-          )}
-        >
-          {currentQuestionIndex === totalQuestions - 1 ? texts.finish[language] : texts.next[language]}
-          {currentQuestionIndex !== totalQuestions - 1 && <ChevronRight size={20} />}
-        </button>
+      <footer className="bg-white border-t border-slate-200 p-4 md:p-6 sticky bottom-0 z-10">
+        <div className="max-w-5xl mx-auto w-full flex justify-between items-center">
+          <button
+            onClick={handlePrev}
+            disabled={currentQuestionIndex === 0}
+            className="px-6 py-3 rounded-xl font-medium text-slate-500 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors flex items-center gap-2"
+          >
+            <ChevronLeft size={20} />
+            <span className="hidden sm:inline">{texts.prev[language]}</span>
+          </button>
+          
+          <button
+            onClick={handleNext}
+            disabled={!answers[currentQuestion.id]}
+            className={cn(
+              "px-8 py-3 rounded-xl font-bold text-lg transition-all shadow-lg shadow-blue-600/20 flex items-center gap-2",
+              answers[currentQuestion.id] 
+                ? "bg-blue-600 text-white hover:bg-blue-700 hover:shadow-xl hover:-translate-y-0.5" 
+                : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+            )}
+          >
+            {currentQuestionIndex === totalQuestions - 1 ? texts.finish[language] : texts.next[language]}
+            {currentQuestionIndex !== totalQuestions - 1 && <ChevronRight size={20} />}
+          </button>
+        </div>
       </footer>
     </div>
   );
