@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTestStore } from '@/store/useTestStore';
-import { questions } from '@/data/questions';
+import { tests } from '@/data/tests';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Save, Clock, CheckCircle, HelpCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -11,18 +11,20 @@ import { cn } from '@/lib/utils';
 export default function TestPage() {
   const router = useRouter();
   const { 
-    status, currentQuestionIndex, answers, timeElapsed, language,
+    status, currentQuestionIndex, answers, timeElapsed, language, currentTestId,
     answerQuestion, nextQuestion, prevQuestion, finishTest, tickTimer
   } = useTestStore();
   
   const [mounted, setMounted] = useState(false);
+  const currentTest = tests.find(t => t.id === currentTestId);
+  const questions = currentTest?.questions || [];
   
   useEffect(() => {
     setMounted(true);
-    if (status === 'idle') {
+    if (status === 'idle' || !currentTest) {
       router.replace('/');
     }
-  }, [status, router]);
+  }, [status, router, currentTest]);
 
   useEffect(() => {
     if (status !== 'in_progress') return;
@@ -30,9 +32,10 @@ export default function TestPage() {
     return () => clearInterval(timer);
   }, [status, tickTimer]);
 
-  if (!mounted || status !== 'in_progress') return null;
-
   const currentQuestion = questions[currentQuestionIndex];
+  
+  if (!mounted || status !== 'in_progress' || !currentQuestion) return null;
+
   const totalQuestions = questions.length;
   const progress = ((currentQuestionIndex + 1) / totalQuestions) * 100;
   

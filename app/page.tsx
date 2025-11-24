@@ -3,9 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTestStore } from '@/store/useTestStore';
-import { questions } from '@/data/questions';
+import { tests } from '@/data/tests';
 import { motion } from 'framer-motion';
-import { Brain, Play, RotateCw, History, ArrowRight } from 'lucide-react';
+import { Brain, Play, RotateCw, History, ArrowRight, CheckCircle2, FileText, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
 
@@ -20,36 +20,37 @@ const ResponsiveContainer = dynamic(() => import('recharts').then(mod => mod.Res
 export default function Home() {
   const router = useRouter();
   const { 
-    language, setLanguage, status, startTest, resumeTest, history, resetTest
+    language, setLanguage, status, startTest, resumeTest, history, resetTest, currentTestId
   } = useTestStore();
   const [mounted, setMounted] = useState(false);
+  const [selectedTestId, setSelectedTestId] = useState<string>(tests[0].id);
 
   useEffect(() => {
     setMounted(true);
-  }, []);
+    if (currentTestId) {
+      setSelectedTestId(currentTestId);
+    }
+  }, [currentTestId]);
 
   if (!mounted) return null;
 
   const texts = {
-    title: { en: 'Scientific IQ Test', zh: '科学智力测试' },
+    title: { en: 'Scientific IQ Assessment', zh: '科学智力评估' },
     subtitle: { 
-      en: 'Evaluate your cognitive abilities with our advanced psychometric assessment. Covers abstract, verbal, spatial, and numerical reasoning.', 
-      zh: '通过我们先进的心理测量评估来测试您的认知能力。涵盖抽象、语言、空间和数值推理。' 
+      en: 'Choose a specialized cognitive battery validated by latest research.', 
+      zh: '选择经最新研究验证的专业认知评估组。' 
     },
-    start: { en: 'Start New Assessment', zh: '开始新测试' },
+    start: { en: 'Start Assessment', zh: '开始评估' },
     resume: { en: 'Resume Session', zh: '继续测试' },
     history: { en: 'Performance History', zh: '历史成绩趋势' },
-    questions: { en: 'Questions', zh: '道题目' },
-    features: {
-        science: { en: 'Scientific Method', zh: '科学方法' },
-        adaptive: { en: 'Multi-Dimensional', zh: '多维度分析' },
-        secure: { en: 'Private & Secure', zh: '隐私安全' }
-    }
+    selectTest: { en: 'Select Assessment Battery', zh: '选择评估组' },
+    questions: { en: 'Questions', zh: '题' },
+    mins: { en: 'mins', zh: '分钟' }
   };
 
   const handleStart = () => {
     resetTest();
-    startTest();
+    startTest(selectedTestId);
     router.push('/test');
   };
 
@@ -89,11 +90,12 @@ export default function Home() {
       </nav>
 
       {/* Hero Section */}
-      <section className="flex-1 flex flex-col items-center justify-center px-4 py-12 md:py-20 text-center max-w-4xl mx-auto">
+      <section className="flex-1 flex flex-col items-center px-4 py-12 md:py-20 text-center max-w-6xl mx-auto w-full">
         <motion.div 
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
+          className="w-full flex flex-col items-center"
         >
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-blue-50 text-blue-700 text-sm font-bold mb-8 border border-blue-100">
              <span className="relative flex h-2 w-2">
@@ -103,16 +105,68 @@ export default function Home() {
              v2.0 Updated Question Bank
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-black mb-6 tracking-tight text-slate-900 leading-[1.1]">
+          <h1 className="text-4xl md:text-6xl font-black mb-6 tracking-tight text-slate-900 leading-[1.1]">
             {texts.title[language]}
           </h1>
           
-          <p className="text-xl md:text-2xl text-slate-500 mb-10 leading-relaxed max-w-2xl mx-auto">
+          <p className="text-lg md:text-xl text-slate-500 mb-12 leading-relaxed max-w-2xl mx-auto">
             {texts.subtitle[language]}
           </p>
+
+          {/* Test Selection Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mb-12 text-left">
+            {tests.map((test) => (
+              <button
+                key={test.id}
+                onClick={() => setSelectedTestId(test.id)}
+                className={cn(
+                  "relative p-6 rounded-2xl border-2 transition-all group hover:shadow-lg",
+                  selectedTestId === test.id
+                    ? "border-blue-600 bg-blue-50/30 ring-4 ring-blue-100/50"
+                    : "border-slate-200 bg-white hover:border-blue-300"
+                )}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 text-blue-600 group-hover:scale-110 transition-transform">
+                    <Brain size={24} />
+                  </div>
+                  {selectedTestId === test.id && (
+                    <CheckCircle2 className="text-blue-600" size={24} />
+                  )}
+                </div>
+                
+                <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  {test.name[language]}
+                </h3>
+                
+                <p className="text-slate-500 text-sm mb-6 line-clamp-2">
+                  {test.description[language]}
+                </p>
+
+                <div className="flex items-center gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
+                  <div className="flex items-center gap-1.5">
+                    <FileText size={14} />
+                    {test.questions.length} {texts.questions[language]}
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={14} />
+                    {test.timeLimit ? Math.round(test.timeLimit / 60) : '∞'} {texts.mins[language]}
+                  </div>
+                </div>
+                
+                {/* Methodology Badge */}
+                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
+                   <span className="px-2 py-1 rounded text-[10px] bg-slate-100 text-slate-500 font-bold uppercase">
+                     {test.methodology.id}
+                   </span>
+                </div>
+              </button>
+            ))}
+          </div>
           
+          {/* Action Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center w-full sm:w-auto">
-            {status === 'in_progress' && (
+            {status === 'in_progress' && currentTestId === selectedTestId && (
               <button
                 onClick={handleResume}
                 className="group flex items-center justify-center gap-3 px-8 py-4 bg-white border border-slate-200 text-slate-700 rounded-2xl font-bold text-lg hover:bg-slate-50 hover:border-blue-200 transition-all shadow-sm hover:shadow-md w-full sm:w-auto"
@@ -131,20 +185,6 @@ export default function Home() {
             </button>
           </div>
 
-          <div className="mt-12 flex justify-center gap-8 md:gap-16 text-sm font-medium text-slate-400">
-             <div className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                {texts.features.science[language]}
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                {texts.features.adaptive[language]}
-             </div>
-             <div className="flex items-center gap-2">
-                <div className="w-1 h-1 rounded-full bg-slate-300" />
-                {texts.features.secure[language]}
-             </div>
-          </div>
         </motion.div>
       </section>
 
@@ -214,7 +254,7 @@ export default function Home() {
       )}
       
       <footer className="py-8 text-center text-sm text-slate-400 bg-slate-50">
-        <p>© 2024 NeuroMetrics Inc. • {questions.length} {texts.questions[language]}</p>
+        <p>© 2024 NeuroMetrics Inc.</p>
       </footer>
     </main>
   );

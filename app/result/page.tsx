@@ -3,9 +3,9 @@
 import { useEffect, useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTestStore, TestResult } from '@/store/useTestStore';
-import { questions } from '@/data/questions';
+import { tests } from '@/data/tests';
 import { motion } from 'framer-motion';
-import { Share2, Download, Home, Brain, Loader2 } from 'lucide-react';
+import { Share2, Download, Home, Brain, Loader2, BookOpen } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import dynamic from 'next/dynamic';
 
@@ -20,11 +20,14 @@ const Radar = dynamic(() => import('recharts').then(mod => mod.Radar), { ssr: fa
 export default function ResultPage() {
   const router = useRouter();
   const { 
-    status, answers, timeElapsed, language, saveResult
+    status, answers, timeElapsed, language, saveResult, currentTestId
   } = useTestStore();
   const [scoreData, setScoreData] = useState<any>(null);
   const cardRef = useRef<HTMLDivElement>(null);
   const [isGenerating, setIsGenerating] = useState(false);
+
+  const currentTest = tests.find(t => t.id === currentTestId) || tests[0];
+  const questions = currentTest.questions;
 
   useEffect(() => {
     // Only run on client side
@@ -65,24 +68,23 @@ export default function ResultPage() {
     // Assume our hard test has a mean raw score of 40% for average population (IQ 100).
     // This is just a simulation.
     const percentage = rawScore / total;
-    // If percentage is 0.4 -> IQ 100. 
-    // If percentage is 1.0 -> IQ 145 (3 SD).
-    // If percentage is 0 -> IQ 70 (-2 SD).
-    // Linear mapping for simplicity: IQ = 70 + (percentage * 75)
-    const iq = Math.round(70 + (percentage * 75));
+    // Standard Deviation 15, Mean 100
+    const zScore = (percentage - 0.4) / 0.2; // Very rough approximation
+    const iq = Math.round(100 + (zScore * 15));
+    // Clamp for safety
+    const clampedIq = Math.max(70, Math.min(160, iq));
 
     const result: TestResult = {
       date: new Date().toISOString(),
-      score: iq,
+      score: clampedIq,
       totalQuestions: total,
       correctCount: correct,
       timeElapsed,
       answers
     };
 
-    // Save only if not already saved? useTestStore handles logic but better be safe
     saveResult(result);
-    setScoreData({ iq, rawScore, total, typeScores });
+    setScoreData({ iq: clampedIq, rawScore, total, typeScores });
   };
 
   const handleShare = async () => {
@@ -130,7 +132,8 @@ export default function ResultPage() {
     time: { en: 'Time Used', zh: '用时' },
     share: { en: 'Download Card', zh: '下载卡片' },
     home: { en: 'Back to Home', zh: '返回首页' },
-    analysis: { en: 'Performance Analysis', zh: '能力分析' }
+    analysis: { en: 'Performance Analysis', zh: '能力分析' },
+    references: { en: 'Scientific References', zh: '科学参考文献' }
   };
 
   const formatTime = (seconds: number) => {
@@ -308,6 +311,23 @@ export default function ResultPage() {
                   : " Consistent practice with spatial puzzles can further enhance your cognitive flexibility and pattern recognition speed."}
               </p>
             </div>
+
+             {/* References Section */}
+             <div className="mt-6 border-t border-slate-100 pt-6">
+                <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+                  <BookOpen size={14} />
+                  {texts.references[language]}
+                </h4>
+                <ul className="space-y-2">
+                  {currentTest.references.map((ref, idx) => (
+                    <li key={idx} className="text-xs text-slate-500 leading-relaxed">
+                      <span className="font-medium text-slate-700">{ref.author}</span> ({ref.year}). 
+                      <span className="italic"> {ref.title}</span>. 
+                      {ref.journal && <span> {ref.journal}.</span>}
+                    </li>
+                  ))}
+                </ul>
+             </div>
           </motion.div>
         </div>
       </div>

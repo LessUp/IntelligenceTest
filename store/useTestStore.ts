@@ -15,6 +15,7 @@ export interface TestResult {
 interface TestState {
   language: 'en' | 'zh';
   status: TestStatus;
+  currentTestId: string | null;
   currentQuestionIndex: number;
   answers: Record<string, string>;
   timeElapsed: number;
@@ -22,7 +23,7 @@ interface TestState {
   
   // Actions
   setLanguage: (lang: 'en' | 'zh') => void;
-  startTest: () => void;
+  startTest: (testId: string) => void;
   resumeTest: () => void;
   answerQuestion: (questionId: string, optionId: string) => void;
   nextQuestion: () => void;
@@ -38,6 +39,7 @@ export const useTestStore = create<TestState>()(
     (set, get) => ({
       language: 'zh',
       status: 'idle',
+      currentTestId: null,
       currentQuestionIndex: 0,
       answers: {},
       timeElapsed: 0,
@@ -45,8 +47,9 @@ export const useTestStore = create<TestState>()(
 
       setLanguage: (lang) => set({ language: lang }),
       
-      startTest: () => set({ 
+      startTest: (testId) => set({ 
         status: 'in_progress', 
+        currentTestId: testId,
         currentQuestionIndex: 0, 
         answers: {}, 
         timeElapsed: 0 
@@ -84,6 +87,7 @@ export const useTestStore = create<TestState>()(
 
       resetTest: () => set({
         status: 'idle',
+        currentTestId: null,
         currentQuestionIndex: 0,
         answers: {},
         timeElapsed: 0
