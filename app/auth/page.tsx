@@ -3,10 +3,11 @@
 import { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Brain, Mail, Lock, User, Loader2, ArrowLeft, Github, Chrome } from 'lucide-react';
+import { Brain, Mail, Lock, User, Loader2, ArrowLeft, Github, Chrome, QrCode, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTestStore } from '@/store/useTestStore';
 import { useUserStore } from '@/store/useUserStore';
+import { WeChatLogin } from '@/components/auth/WeChatLogin';
 
 function AuthContent() {
   const router = useRouter();
@@ -21,6 +22,7 @@ function AuthContent() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [error, setError] = useState('');
+  const [showWeChatQR, setShowWeChatQR] = useState(false);
 
   const texts = {
     login: { en: 'Sign In', zh: '登录' },
@@ -38,6 +40,7 @@ function AuthContent() {
     welcome: { en: 'Welcome to NeuroMetrics', zh: '欢迎来到 NeuroMetrics' },
     subtitle: { en: 'Unlock your cognitive potential', zh: '解锁您的认知潜能' },
     demoHint: { en: 'Demo: Use any email/password', zh: '演示：使用任意邮箱/密码' },
+    wechat: { en: 'WeChat', zh: '微信' },
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -229,16 +232,50 @@ function AuthContent() {
           </div>
 
           {/* Social Login */}
-          <div className="grid grid-cols-2 gap-4">
-            <button className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-              <Chrome size={20} />
-              <span className="font-medium">Google</span>
+          <div className="grid grid-cols-3 gap-3">
+            <button 
+              onClick={() => setShowWeChatQR(true)}
+              className="flex items-center justify-center gap-2 py-3 border border-green-200 bg-green-50 rounded-xl hover:bg-green-100 transition-colors"
+            >
+              <svg className="w-5 h-5 text-green-600" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M8.691 2.188C3.891 2.188 0 5.476 0 9.53c0 2.212 1.17 4.203 3.002 5.55a.59.59 0 01.213.665l-.39 1.48c-.019.07-.048.141-.048.213 0 .163.13.295.29.295a.326.326 0 00.167-.054l1.903-1.114a.864.864 0 01.717-.098 10.16 10.16 0 002.837.403c.276 0 .543-.027.811-.05-.857-2.578.157-4.972 1.932-6.446 1.703-1.415 3.882-1.98 5.853-1.838-.576-3.583-4.196-6.348-8.596-6.348zM5.785 5.991c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178A1.17 1.17 0 014.623 7.17c0-.651.52-1.18 1.162-1.18zm5.813 0c.642 0 1.162.529 1.162 1.18a1.17 1.17 0 01-1.162 1.178 1.17 1.17 0 01-1.162-1.178c0-.651.52-1.18 1.162-1.18zm5.34 2.867c-1.797-.052-3.746.512-5.28 1.786-1.72 1.428-2.687 3.72-1.78 6.22.942 2.453 3.666 4.229 6.884 4.229.826 0 1.622-.12 2.361-.336a.722.722 0 01.598.082l1.584.926a.272.272 0 00.14.045c.134 0 .241-.11.241-.245 0-.06-.024-.119-.04-.178l-.325-1.233a.492.492 0 01.178-.554c1.521-1.125 2.51-2.78 2.51-4.617 0-3.39-3.407-6.126-7.07-6.126zm-2.164 3.684a.973.973 0 11.002 1.946.973.973 0 01-.002-1.946zm4.329 0a.973.973 0 11.002 1.946.973.973 0 01-.002-1.946z"/>
+              </svg>
+              <span className="font-medium text-green-700 text-sm">{texts.wechat[language]}</span>
             </button>
             <button className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
-              <Github size={20} />
-              <span className="font-medium">GitHub</span>
+              <Chrome size={18} />
+              <span className="font-medium text-sm">Google</span>
+            </button>
+            <button className="flex items-center justify-center gap-2 py-3 border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors">
+              <Github size={18} />
+              <span className="font-medium text-sm">GitHub</span>
             </button>
           </div>
+
+          {/* WeChat QR Modal */}
+          {showWeChatQR && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl shadow-xl relative max-w-sm w-full mx-4"
+              >
+                <button
+                  onClick={() => setShowWeChatQR(false)}
+                  className="absolute top-4 right-4 p-1 text-slate-400 hover:text-slate-600"
+                >
+                  <X size={20} />
+                </button>
+                <WeChatLogin 
+                  onCancel={() => setShowWeChatQR(false)}
+                  onSuccess={(userInfo) => {
+                    setShowWeChatQR(false);
+                    router.push(redirect);
+                  }}
+                />
+              </motion.div>
+            </div>
+          )}
 
           {/* Toggle Mode */}
           <p className="mt-8 text-center text-slate-500">

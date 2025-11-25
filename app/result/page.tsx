@@ -76,6 +76,7 @@ export default function ResultPage() {
 
     const result: TestResult = {
       date: new Date().toISOString(),
+      testId: currentTestId || 'unknown',
       score: clampedIq,
       totalQuestions: total,
       correctCount: correct,

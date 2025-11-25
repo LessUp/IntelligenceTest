@@ -5,6 +5,7 @@ export type TestStatus = 'idle' | 'in_progress' | 'completed';
 
 export interface TestResult {
   date: string;
+  testId: string;
   score: number;
   totalQuestions: number;
   correctCount: number;
