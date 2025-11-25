@@ -1,4 +1,7 @@
 import { TestBank, Question } from './types';
+import { cognitiveFlexibilityQuestions, workingMemoryQuestions, fluidIntelligenceQuestions } from './advancedTests';
+import { emotionalIntelligenceQuestions, processingSpeedQuestions } from './emotionalIntelligence';
+import { verbalReasoningQuestions, crystallizedIntelligenceQuestions, creativityQuestions } from './verbalReasoning';
 
 // Re-using the existing questions as a base for the Standard Test
 const standardQuestions: Question[] = [
@@ -226,6 +229,23 @@ const clinicalQuestions: Question[] = [
   }
 ];
 
+// ============================================================================
+// 综合高级测试 (Premium Tests - 会员专享)
+// ============================================================================
+const premiumComprehensiveQuestions: Question[] = [
+  ...fluidIntelligenceQuestions,
+  ...cognitiveFlexibilityQuestions,
+  ...workingMemoryQuestions,
+  ...emotionalIntelligenceQuestions,
+  ...verbalReasoningQuestions,
+];
+
+const neuroscientificQuestions: Question[] = [
+  ...cognitiveFlexibilityQuestions,
+  ...workingMemoryQuestions,
+  ...processingSpeedQuestions,
+];
+
 export const tests: TestBank[] = [
   {
     id: 'standard-iq',
@@ -267,10 +287,202 @@ export const tests: TestBank[] = [
       theoreticalBasis: { en: "Cattell-Horn-Carroll (CHC) Theory", zh: "Cattell-Horn-Carroll (CHC) 理论" }
     },
     questions: clinicalQuestions,
-    timeLimit: 1800, // 30 mins
+    timeLimit: 1800,
     references: [
       { title: "The neuroscience of human intelligence differences", author: "Deary, I. J., et al.", year: 2010, journal: "Nature Reviews Neuroscience" },
       { title: "Theory of fluid and crystallized intelligence", author: "Raymond Cattell", year: 1963 }
+    ]
+  },
+  // ============================================================================
+  // 新增测试套件
+  // ============================================================================
+  {
+    id: 'cognitive-flexibility',
+    name: {
+      en: "Cognitive Flexibility Assessment",
+      zh: "认知灵活性评估"
+    },
+    description: {
+      en: "Based on Wisconsin Card Sorting Test. Measures mental set-shifting, adaptation to changing rules, and executive function.",
+      zh: "基于威斯康星卡片分类测试。测量心理定势转换、规则适应能力和执行功能。"
+    },
+    methodology: {
+      id: 'wcst',
+      name: { en: "Wisconsin Card Sorting Test (WCST)", zh: "威斯康星卡片分类测试" },
+      description: { en: "Gold standard for measuring cognitive flexibility and executive function.", zh: "测量认知灵活性和执行功能的黄金标准。" },
+      theoreticalBasis: { en: "Executive Function Theory (Miyake et al., 2000)", zh: "执行功能理论 (Miyake et al., 2000)" }
+    },
+    questions: cognitiveFlexibilityQuestions,
+    timeLimit: 900,
+    isPremium: true,
+    references: [
+      { title: "Unity and diversity of executive functions", author: "Miyake, A., et al.", year: 2000, journal: "Cognitive Psychology" },
+      { title: "Cognitive flexibility: Theory and assessment", author: "Diamond, A.", year: 2013, journal: "Developmental Cognitive Neuroscience" }
+    ]
+  },
+  {
+    id: 'working-memory',
+    name: {
+      en: "Working Memory Capacity Test",
+      zh: "工作记忆容量测试"
+    },
+    description: {
+      en: "Tests phonological loop, visuospatial sketchpad, and central executive using N-back and complex span tasks.",
+      zh: "通过N-back和复杂广度任务测试语音环、视空间画板和中央执行系统。"
+    },
+    methodology: {
+      id: 'nback',
+      name: { en: "N-Back & Complex Span Paradigm", zh: "N-Back与复杂广度范式" },
+      description: { en: "Measures working memory updating and manipulation.", zh: "测量工作记忆更新和操作能力。" },
+      theoreticalBasis: { en: "Baddeley's Working Memory Model (2000)", zh: "Baddeley工作记忆模型 (2000)" }
+    },
+    questions: workingMemoryQuestions,
+    timeLimit: 720,
+    isPremium: true,
+    references: [
+      { title: "The episodic buffer: A new component of working memory?", author: "Baddeley, A.D.", year: 2000, journal: "Trends in Cognitive Sciences" },
+      { title: "Working memory capacity and fluid intelligence", author: "Engle, R.W.", year: 2002, journal: "Current Directions in Psychological Science" }
+    ]
+  },
+  {
+    id: 'emotional-intelligence',
+    name: {
+      en: "Emotional Intelligence Assessment",
+      zh: "情绪智力评估"
+    },
+    description: {
+      en: "Measures perceiving, using, understanding, and managing emotions based on the Mayer-Salovey model.",
+      zh: "基于Mayer-Salovey模型测量感知、使用、理解和管理情绪的能力。"
+    },
+    methodology: {
+      id: 'msceit',
+      name: { en: "MSCEIT-Based Assessment", zh: "基于MSCEIT的评估" },
+      description: { en: "Measures emotional intelligence as an ability, not a personality trait.", zh: "将情绪智力作为能力而非人格特质来测量。" },
+      theoreticalBasis: { en: "Four-Branch Model of EI (Mayer & Salovey, 1997)", zh: "情绪智力四分支模型 (Mayer & Salovey, 1997)" }
+    },
+    questions: emotionalIntelligenceQuestions,
+    timeLimit: 1200,
+    isPremium: true,
+    references: [
+      { title: "Emotional intelligence as a standard intelligence", author: "Mayer, J.D., et al.", year: 2001, journal: "Emotion" },
+      { title: "The MSCEIT: Measuring emotional intelligence", author: "Mayer, Salovey, Caruso", year: 2002 }
+    ]
+  },
+  {
+    id: 'processing-speed',
+    name: {
+      en: "Processing Speed Assessment",
+      zh: "处理速度评估"
+    },
+    description: {
+      en: "Measures cognitive processing speed through symbol search, coding, and cancellation tasks.",
+      zh: "通过符号搜索、编码和删除任务测量认知处理速度。"
+    },
+    methodology: {
+      id: 'psi',
+      name: { en: "Processing Speed Index Tasks", zh: "处理速度指数任务" },
+      description: { en: "From WAIS-IV PSI domain.", zh: "来自WAIS-IV处理速度指数领域。" },
+      theoreticalBasis: { en: "Speed of Information Processing (Salthouse, 1996)", zh: "信息处理速度理论 (Salthouse, 1996)" }
+    },
+    questions: processingSpeedQuestions,
+    timeLimit: 600,
+    references: [
+      { title: "The processing-speed theory of adult age differences", author: "Salthouse, T.A.", year: 1996, journal: "Psychological Review" }
+    ]
+  },
+  {
+    id: 'verbal-reasoning',
+    name: {
+      en: "Verbal Reasoning & Crystallized Intelligence",
+      zh: "言语推理与晶体智力"
+    },
+    description: {
+      en: "Assesses vocabulary, verbal analogies, and accumulated knowledge (Gc).",
+      zh: "评估词汇、言语类比和积累的知识（晶体智力Gc）。"
+    },
+    methodology: {
+      id: 'gc',
+      name: { en: "Crystallized Intelligence (Gc) Assessment", zh: "晶体智力(Gc)评估" },
+      description: { en: "Measures breadth and depth of acquired knowledge.", zh: "测量所获知识的广度和深度。" },
+      theoreticalBasis: { en: "Cattell-Horn-Carroll (CHC) Theory", zh: "Cattell-Horn-Carroll (CHC) 理论" }
+    },
+    questions: [...verbalReasoningQuestions, ...crystallizedIntelligenceQuestions],
+    timeLimit: 1200,
+    references: [
+      { title: "Human cognitive abilities: A survey of factor-analytic studies", author: "Carroll, J.B.", year: 1993 },
+      { title: "CHC theory and the human cognitive abilities project", author: "McGrew, K.S.", year: 2009, journal: "Intelligence" }
+    ]
+  },
+  {
+    id: 'creativity-divergent',
+    name: {
+      en: "Creative Thinking & Divergent Reasoning",
+      zh: "创造性思维与发散推理"
+    },
+    description: {
+      en: "Measures originality, fluency, flexibility, and elaboration in thinking.",
+      zh: "测量思维的独创性、流畅性、灵活性和精细度。"
+    },
+    methodology: {
+      id: 'ttct',
+      name: { en: "Torrance-Based Creative Thinking Test", zh: "基于托兰斯的创造性思维测试" },
+      description: { en: "Assesses divergent thinking and creative potential.", zh: "评估发散思维和创造潜力。" },
+      theoreticalBasis: { en: "Guilford's Structure of Intellect (Divergent Production)", zh: "吉尔福德智力结构（发散生成）" }
+    },
+    questions: creativityQuestions,
+    timeLimit: 900,
+    isPremium: true,
+    references: [
+      { title: "Torrance Tests of Creative Thinking", author: "Torrance, E.P.", year: 1974 },
+      { title: "The nature of human intelligence", author: "Guilford, J.P.", year: 1967 }
+    ]
+  },
+  {
+    id: 'comprehensive-premium',
+    name: {
+      en: "🌟 Premium Comprehensive IQ Battery",
+      zh: "🌟 高级综合智力评估套件"
+    },
+    description: {
+      en: "Full-spectrum cognitive assessment covering all CHC broad abilities. Includes detailed AI analysis report.",
+      zh: "涵盖所有CHC广泛能力的全谱认知评估。包含详细的AI分析报告。"
+    },
+    methodology: {
+      id: 'chc-full',
+      name: { en: "Full CHC Assessment Battery", zh: "完整CHC评估组" },
+      description: { en: "Comprehensive assessment of all cognitive domains.", zh: "所有认知领域的综合评估。" },
+      theoreticalBasis: { en: "Cattell-Horn-Carroll Extended Theory", zh: "Cattell-Horn-Carroll扩展理论" }
+    },
+    questions: premiumComprehensiveQuestions,
+    timeLimit: 3600,
+    isPremium: true,
+    references: [
+      { title: "The Cambridge Handbook of Intelligence", author: "Sternberg & Kaufman", year: 2011 },
+      { title: "Intelligence: New findings and theoretical developments", author: "Nisbett, R.E., et al.", year: 2012, journal: "American Psychologist" }
+    ]
+  },
+  {
+    id: 'neuroscience-battery',
+    name: {
+      en: "🧠 Neuroscientific Cognitive Assessment",
+      zh: "🧠 神经科学认知评估"
+    },
+    description: {
+      en: "Based on latest neuroimaging research. Targets specific brain networks: prefrontal (executive), parietal (spatial), temporal (memory).",
+      zh: "基于最新神经影像研究。针对特定脑网络：前额叶（执行）、顶叶（空间）、颞叶（记忆）。"
+    },
+    methodology: {
+      id: 'neuro-cog',
+      name: { en: "Neuroimaging-Informed Assessment", zh: "神经影像学指导评估" },
+      description: { en: "Tasks mapped to brain networks from fMRI research.", zh: "任务映射到fMRI研究中的脑网络。" },
+      theoreticalBasis: { en: "P-FIT Theory (Jung & Haier, 2007)", zh: "P-FIT理论 (Jung & Haier, 2007)" }
+    },
+    questions: neuroscientificQuestions,
+    timeLimit: 2400,
+    isPremium: true,
+    references: [
+      { title: "The Parieto-Frontal Integration Theory (P-FIT) of intelligence", author: "Jung, R.E. & Haier, R.J.", year: 2007, journal: "Behavioral and Brain Sciences" },
+      { title: "Neuroscience of human intelligence differences", author: "Deary, I.J., et al.", year: 2010, journal: "Nature Reviews Neuroscience" }
     ]
   }
 ];

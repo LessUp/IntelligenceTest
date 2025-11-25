@@ -5,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useTestStore } from '@/store/useTestStore';
 import { tests } from '@/data/tests';
 import { motion } from 'framer-motion';
-import { Brain, Play, RotateCw, History, ArrowRight, CheckCircle2, FileText, Clock } from 'lucide-react';
+import { Brain, Play, RotateCw, History, ArrowRight, CheckCircle2, FileText, Clock, Crown, User, LogIn, BookOpen, Sparkles, Lock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import dynamic from 'next/dynamic';
+import { useUserStore, pricingPlans } from '@/store/useUserStore';
 
 // Dynamic import for charts
 const LineChart = dynamic(() => import('recharts').then(mod => mod.LineChart), { ssr: false });
@@ -22,6 +23,7 @@ export default function Home() {
   const { 
     language, setLanguage, status, startTest, resumeTest, history, resetTest, currentTestId
   } = useTestStore();
+  const { user, isAuthenticated, canAccessTest } = useUserStore();
   const [mounted, setMounted] = useState(false);
   const [selectedTestId, setSelectedTestId] = useState<string>(tests[0].id);
 
@@ -45,7 +47,15 @@ export default function Home() {
     history: { en: 'Performance History', zh: '历史成绩趋势' },
     selectTest: { en: 'Select Assessment Battery', zh: '选择评估组' },
     questions: { en: 'Questions', zh: '题' },
-    mins: { en: 'mins', zh: '分钟' }
+    mins: { en: 'mins', zh: '分钟' },
+    login: { en: 'Sign In', zh: '登录' },
+    dashboard: { en: 'Dashboard', zh: '仪表板' },
+    pricing: { en: 'Pricing', zh: '价格' },
+    papers: { en: 'Papers', zh: '论文' },
+    premium: { en: 'Premium', zh: '高级' },
+    locked: { en: 'Premium Only', zh: '仅限会员' },
+    freeTests: { en: 'Free Tests', zh: '免费测试' },
+    premiumTests: { en: 'Premium Tests', zh: '高级测试' },
   };
 
   const handleStart = () => {
@@ -67,25 +77,68 @@ export default function Home() {
           <Brain className="w-8 h-8" />
           <span>NEURO/METRICS</span>
         </div>
-        <div className="flex gap-1 bg-white p-1 rounded-full border border-slate-200 shadow-sm">
-          <button
-            onClick={() => setLanguage('en')}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-              language === 'en' ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
-            )}
-          >
-            English
-          </button>
-          <button
-            onClick={() => setLanguage('zh')}
-            className={cn(
-              "px-4 py-1.5 rounded-full text-sm font-medium transition-all",
-              language === 'zh' ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
-            )}
-          >
-            中文
-          </button>
+        
+        <div className="flex items-center gap-4">
+          {/* Navigation Links */}
+          <div className="hidden md:flex items-center gap-1">
+            <button
+              onClick={() => router.push('/papers')}
+              className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+            >
+              <BookOpen size={16} />
+              {texts.papers[language]}
+            </button>
+            <button
+              onClick={() => router.push('/pricing')}
+              className="px-3 py-2 text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1"
+            >
+              <Sparkles size={16} />
+              {texts.pricing[language]}
+            </button>
+          </div>
+
+          {/* Language Toggle */}
+          <div className="flex gap-1 bg-white p-1 rounded-full border border-slate-200 shadow-sm">
+            <button
+              onClick={() => setLanguage('en')}
+              className={cn(
+                "px-3 py-1 rounded-full text-sm font-medium transition-all",
+                language === 'en' ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
+              )}
+            >
+              EN
+            </button>
+            <button
+              onClick={() => setLanguage('zh')}
+              className={cn(
+                "px-3 py-1 rounded-full text-sm font-medium transition-all",
+                language === 'zh' ? "bg-blue-600 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
+              )}
+            >
+              中文
+            </button>
+          </div>
+
+          {/* Auth Button */}
+          {isAuthenticated ? (
+            <button
+              onClick={() => router.push('/dashboard')}
+              className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-full text-sm font-medium text-slate-700 hover:border-blue-300 hover:text-blue-600 transition-all"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-xs font-bold">
+                {user?.name?.charAt(0).toUpperCase()}
+              </div>
+              {texts.dashboard[language]}
+            </button>
+          ) : (
+            <button
+              onClick={() => router.push('/auth')}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-full text-sm font-medium hover:bg-blue-700 transition-colors"
+            >
+              <LogIn size={16} />
+              {texts.login[language]}
+            </button>
+          )}
         </div>
       </nav>
 
@@ -114,54 +167,95 @@ export default function Home() {
           </p>
 
           {/* Test Selection Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-4xl mb-12 text-left">
-            {tests.map((test) => (
-              <button
-                key={test.id}
-                onClick={() => setSelectedTestId(test.id)}
-                className={cn(
-                  "relative p-6 rounded-2xl border-2 transition-all group hover:shadow-lg",
-                  selectedTestId === test.id
-                    ? "border-blue-600 bg-blue-50/30 ring-4 ring-blue-100/50"
-                    : "border-slate-200 bg-white hover:border-blue-300"
-                )}
-              >
-                <div className="flex justify-between items-start mb-4">
-                  <div className="p-3 rounded-xl bg-white shadow-sm border border-slate-100 text-blue-600 group-hover:scale-110 transition-transform">
-                    <Brain size={24} />
-                  </div>
-                  {selectedTestId === test.id && (
-                    <CheckCircle2 className="text-blue-600" size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full max-w-6xl mb-12 text-left">
+            {tests.map((test) => {
+              const canAccess = canAccessTest(test.id, test.isPremium);
+              const isLocked = test.isPremium && !canAccess;
+              
+              return (
+                <button
+                  key={test.id}
+                  onClick={() => !isLocked && setSelectedTestId(test.id)}
+                  className={cn(
+                    "relative p-6 rounded-2xl border-2 transition-all group",
+                    isLocked 
+                      ? "border-slate-100 bg-slate-50/50 cursor-not-allowed"
+                      : selectedTestId === test.id
+                        ? "border-blue-600 bg-blue-50/30 ring-4 ring-blue-100/50"
+                        : "border-slate-200 bg-white hover:border-blue-300 hover:shadow-lg"
                   )}
-                </div>
-                
-                <h3 className="text-xl font-bold text-slate-900 mb-2">
-                  {test.name[language]}
-                </h3>
-                
-                <p className="text-slate-500 text-sm mb-6 line-clamp-2">
-                  {test.description[language]}
-                </p>
+                >
+                  {/* Premium Badge */}
+                  {test.isPremium && (
+                    <div className="absolute top-4 right-4">
+                      <span className={cn(
+                        "flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold",
+                        canAccess 
+                          ? "bg-amber-100 text-amber-700" 
+                          : "bg-slate-100 text-slate-500"
+                      )}>
+                        {canAccess ? <Crown size={12} /> : <Lock size={12} />}
+                        {canAccess ? texts.premium[language] : texts.locked[language]}
+                      </span>
+                    </div>
+                  )}
 
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-400 uppercase tracking-wider">
-                  <div className="flex items-center gap-1.5">
-                    <FileText size={14} />
-                    {test.questions.length} {texts.questions[language]}
+                  <div className="flex justify-between items-start mb-4">
+                    <div className={cn(
+                      "p-3 rounded-xl shadow-sm border transition-transform",
+                      isLocked 
+                        ? "bg-slate-100 border-slate-200 text-slate-400"
+                        : "bg-white border-slate-100 text-blue-600 group-hover:scale-110"
+                    )}>
+                      <Brain size={24} />
+                    </div>
+                    {selectedTestId === test.id && !isLocked && (
+                      <CheckCircle2 className="text-blue-600" size={24} />
+                    )}
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Clock size={14} />
-                    {test.timeLimit ? Math.round(test.timeLimit / 60) : '∞'} {texts.mins[language]}
+                  
+                  <h3 className={cn(
+                    "text-lg font-bold mb-2 pr-16",
+                    isLocked ? "text-slate-400" : "text-slate-900"
+                  )}>
+                    {test.name[language]}
+                  </h3>
+                  
+                  <p className={cn(
+                    "text-sm mb-4 line-clamp-2",
+                    isLocked ? "text-slate-400" : "text-slate-500"
+                  )}>
+                    {test.description[language]}
+                  </p>
+
+                  <div className={cn(
+                    "flex items-center gap-4 text-xs font-medium uppercase tracking-wider",
+                    isLocked ? "text-slate-300" : "text-slate-400"
+                  )}>
+                    <div className="flex items-center gap-1.5">
+                      <FileText size={14} />
+                      {test.questions.length} {texts.questions[language]}
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Clock size={14} />
+                      {test.timeLimit ? Math.round(test.timeLimit / 60) : '∞'} {texts.mins[language]}
+                    </div>
                   </div>
-                </div>
-                
-                {/* Methodology Badge */}
-                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity hidden md:block">
-                   <span className="px-2 py-1 rounded text-[10px] bg-slate-100 text-slate-500 font-bold uppercase">
-                     {test.methodology.id}
-                   </span>
-                </div>
-              </button>
-            ))}
+                  
+                  {/* Unlock Button for locked tests */}
+                  {isLocked && (
+                    <div 
+                      className="absolute inset-0 flex items-center justify-center bg-white/60 backdrop-blur-[1px] rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={(e) => { e.stopPropagation(); router.push('/pricing'); }}
+                    >
+                      <span className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-lg">
+                        {language === 'en' ? 'Unlock Now' : '立即解锁'}
+                      </span>
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
           
           {/* Action Buttons */}
